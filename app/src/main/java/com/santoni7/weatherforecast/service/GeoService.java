@@ -83,7 +83,7 @@ public class GeoService extends IntentService {
         public void onConnected(@Nullable Bundle bundle) {
             Log.i(TAG, "GoogleApiCallbacks/onConnected");
             try {
-                mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                mLastLocation =LocationServices.FusedLocationApi.getLastLocation (mGoogleApiClient);
 
                 if (mLastLocation != null) {
                     sendResult();
