@@ -14,41 +14,38 @@ import android.os.Build;
 import android.provider.Settings;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import com.santoni7.weatherforecast.model.GeoData;
 import com.santoni7.weatherforecast.service.GeoService;
 import com.santoni7.weatherforecast.service.WeatherPullService;
-import com.santoni7.weatherforecast.util.JsonResponseWrapper;
+import com.santoni7.weatherforecast.util.JsonParser;
 import com.santoni7.weatherforecast.util.OfflineWeatherStorage;
+import com.santoni7.weatherforecast.util.PreferenceManager;
 
 import java.util.Calendar;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MainContract.View {
     private final static String TAG = "MainActivity";
 
+    MainContract.Presenter presenter;
     WeatherBroadcastReceiver weatherBroadcastReceiver;
     GeoServiceReceiver geoServiceReceiver;
-    String currentCity = "London";
-    String currentCityLocalized;
-    Calendar lastUpdate;
+    //    String locationName = "London";
+//    String locationNameLocalized;
+//    Calendar lastUpdate;
 
     Intent weatherPullIntent;
-    JsonResponseWrapper wrapper;
-
-    SharedPreferences sPref;
-    static final String PREF_LOCATION_KEY = "LocationCity";
-    static final String PREF_LOCATION_LOCALIZED_KEY = "LocalizedCity";
-    static final String PREF_LAST_UPDATE = "LastUpdate";
+//    JsonParser jsonParser;
+    GeoData geoData = new GeoData(false, null, null);
 
     ProgressDialog loadingDialog;
     long ldStartedMs;
@@ -57,10 +54,17 @@ public class MainActivity extends AppCompatActivity {
     LinearLayout fragmentContainer;
 
     MainFragment mainFragment;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        PreferenceManager.getInstance(this);
+
+        presenter = new MainPresenter();
+        presenter.attachView(this);
+
 
         weatherBroadcastReceiver = new WeatherBroadcastReceiver();
         IntentFilter intentFilter = new IntentFilter(WeatherPullService.ACTION_RESULT);
@@ -68,8 +72,7 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(weatherBroadcastReceiver, intentFilter);
 
 
-        requestGeoUpdate();
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M ) {
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
             checkPermission();
         }
 
@@ -78,37 +81,48 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addCategory(Intent.CATEGORY_DEFAULT);
         registerReceiver(geoServiceReceiver, intentFilter);
 
-        sPref = getPreferences(MODE_PRIVATE);
-        if(sPref.contains(PREF_LOCATION_KEY)){
-            currentCity = sPref.getString(PREF_LOCATION_KEY, null);
-            currentCityLocalized = sPref.getString(PREF_LOCATION_LOCALIZED_KEY, null);
-            lastUpdate = Calendar.getInstance();
-            lastUpdate.setTimeInMillis(sPref.getLong(PREF_LAST_UPDATE, 0));
-            requestWeatherUpdate();
+
+        String weatherJson = OfflineWeatherStorage.Read(this);
+
+        mainFragment = new MainFragment();
+        JsonParser jsonParser = null;
+        if (weatherJson != null) {
+            jsonParser = new JsonParser(weatherJson);
+            mainFragment.setData(jsonParser, geoData);
+
         }
 
-        String weather = OfflineWeatherStorage.Read(this);
-        if(weather!=null){
-            wrapper = new JsonResponseWrapper(weather);
+        if (jsonParser == null || jsonParser.getForecastByDay().isEmpty()) {
+            buildProgressDialog();
         }
 
 
         fragmentContainer = (LinearLayout) findViewById(R.id.fragment_container);
 
-        mainFragment = new MainFragment();
-        if(wrapper != null) mainFragment.setWrapper(wrapper, currentCityLocalized, lastUpdate);
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         ft.add(R.id.fragment_container, mainFragment);
         ft.commit();
 
-
-        if(wrapper == null || wrapper.getForecastByDay().isEmpty()){
-            buildProgressDialog();
-        }
+        presenter.onCreated();
     }
 
-    private void buildProgressDialog() {
-        if(currentCity == null) {
+    @Override
+    public void updateView(JsonParser jsonParser) {
+        mainFragment.updateData(jsonParser, geoData);
+    }
+
+    @Override
+    public Context getContext() {
+        return getApplicationContext();
+    }
+
+    @Override
+    public SharedPreferences getDefaultPreferences() {
+        return null;
+    }
+
+    void buildProgressDialog() {
+        if (!geoData.success) {
             checkPermission();
             return;
         }
@@ -122,33 +136,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        if(currentCity == null) {
-            requestGeoUpdate();
-        }
+        presenter.onResume();
     }
 
-    public void onBtnClick(View v){
-        switch (v.getId()){
-            case R.id.btnAbout:
-                buildAboutDialog();
-                break;
-            case R.id.btnRefresh:
-                requestWeatherUpdate();
-                break;
-        }
+    public void onBtnClick(View v) {
+        presenter.onBtnClick(v.getId());
     }
+
 
     @Override
-    protected void onPostResume() {
-        if(mainFragment!=null && wrapper!=null){
-            mainFragment.setWrapper(wrapper, currentCityLocalized, lastUpdate);
-            mainFragment.updateData();
-        }
-        super.onPostResume();
-    }
-
-    private void alertMessageNoGps() {
+    public void alertDialogNoGPS() {
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(R.string.request_gps)
                 .setCancelable(false)
@@ -166,7 +163,8 @@ public class MainActivity extends AppCompatActivity {
         alert.show();
     }
 
-    private void buildAboutDialog() {
+    @Override
+    public void aboutDialog() {
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.about_title)
                 .setMessage(R.string.about_message)
@@ -179,9 +177,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         try {
+            presenter.onStop();
             unregisterReceiver(weatherBroadcastReceiver);
             unregisterReceiver(geoServiceReceiver);
-        }catch (Exception r){
+        } catch (Exception r) {
             r.fillInStackTrace();
         }
         super.onStop();
@@ -192,15 +191,15 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    public void checkPermission(){
+    public void checkPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                ){//Can add more as per requirement
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                ) {//Can add more as per requirement
 
             if (ActivityCompat.shouldShowRequestPermissionRationale(
                     this, Manifest.permission.ACCESS_FINE_LOCATION)) {
                 Snackbar.make(fragmentContainer, "This app needs to be allowed to use GPS", Snackbar.LENGTH_SHORT).show();
-            }else {
+            } else {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                         123);
@@ -208,12 +207,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void requestGeoUpdate(){
+    @Override
+    public void requestGeoUpdate() {
         checkPermission();
         final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        boolean forceUpdate = currentCity == null;
+        boolean forceUpdate = geoData.locationName == null;
         if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            alertMessageNoGps();
+            alertDialogNoGPS();
             forceUpdate = true;
         }
 
@@ -222,14 +222,15 @@ public class MainActivity extends AppCompatActivity {
         startService(mGeoIntent);
     }
 
-    public void requestWeatherUpdate() {
-        if(currentCity == null || currentCity.isEmpty()) {
-            Toast.makeText(this, "Could not request weather update: unknown location", Toast.LENGTH_SHORT).show();
-            return;
-        }
+    @Override
+    public void requestWeatherUpdate(GeoData data) {
+//        if (geoData.locationName == null || geoData.locationName.isEmpty()) {
+//            Toast.makeText(this, "Could not request weather update: unknown location", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
         weatherPullIntent = new Intent(this, WeatherPullService.class);
         weatherPullIntent.putExtra(WeatherPullService.EXTRA_LOCATIONTYPE, String.valueOf(WeatherPullService.LocationType.BY_CITY))
-                .putExtra(WeatherPullService.EXTRA_LOCATION, currentCity)
+                .putExtra(WeatherPullService.EXTRA_LOCATION, data.locationName)
                 .putExtra(WeatherPullService.EXTRA_APPID, getString(R.string.openweather_appid));
         startService(weatherPullIntent);
     }
@@ -240,7 +241,7 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             try {
                 boolean error = intent.getBooleanExtra(WeatherPullService.EXTRA_RESULT_IS_ERROR, false);
-                if(error){
+                if (error) {
                     Snackbar.make(fragmentContainer, "Could not pull forecast", Snackbar.LENGTH_SHORT).show();
                     return;
                 }
@@ -252,18 +253,18 @@ public class MainActivity extends AppCompatActivity {
                 if (result == null || result.equals("error")) {
                     Toast.makeText(context, "Could not pull forecast", Toast.LENGTH_SHORT).show();
                 }
-                wrapper = new JsonResponseWrapper(result);
-                OfflineWeatherStorage.Write(getApplicationContext(), result);
-                lastUpdate = Calendar.getInstance();
-                sPref.edit().putLong(PREF_LAST_UPDATE, lastUpdate.getTimeInMillis()).apply();
-                mainFragment.setWrapper(wrapper, currentCityLocalized, lastUpdate);
-                mainFragment.updateData();
-            }
-            catch (Exception e){
+                OfflineWeatherStorage.Write(MainActivity.this, result);
+
+                presenter.onWeatherResult(result);
+
+
+
+            } catch (Exception e) {
                 e.fillInStackTrace();
             }
         }
     }
+
 
     public class GeoServiceReceiver extends BroadcastReceiver {
         @Override
@@ -272,22 +273,19 @@ public class MainActivity extends AppCompatActivity {
                 Log.i(TAG, "GeoServiceReceiver/onReceive");
                 boolean success = intent.getBooleanExtra(GeoService.EXTRA_RESULTOK_OUT, false);
                 if (success) {
-                    currentCity = intent.getStringExtra(GeoService.EXTRA_CITY_OUT);
-                    currentCityLocalized = intent.getStringExtra(GeoService.EXTRA_CITY_LOCALIZED_OUT);
-                    sPref = getPreferences(MODE_PRIVATE);
-                    SharedPreferences.Editor editor = sPref.edit();
-                    editor.putString(PREF_LOCATION_KEY, currentCity);
-                    editor.putString(PREF_LOCATION_LOCALIZED_KEY, currentCityLocalized);
-                    editor.apply();
-                    requestWeatherUpdate();
+                    geoData = new GeoData(intent);
+                    PreferenceManager pm = PreferenceManager.getInstance();
+                    pm.setLocationName(geoData.locationName);
+                    pm.setLocationNameLocalized(geoData.locationNameLocalized);
+                    presenter.onGeoResult(geoData);
                 } else {
                     if (loadingDialog != null && loadingDialog.isShowing() && System.currentTimeMillis() - ldStartedMs > GEO_TIMEOUT) {
                         loadingDialog.cancel();
-                        alertMessageNoGps();
+                        alertDialogNoGPS();
                         ldStartedMs = System.currentTimeMillis();
                     }
                 }
-            }catch(Exception e){
+            } catch (Exception e) {
                 e.fillInStackTrace();
             }
         }

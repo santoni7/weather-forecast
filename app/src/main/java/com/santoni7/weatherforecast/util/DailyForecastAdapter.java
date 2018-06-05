@@ -11,6 +11,9 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.santoni7.weatherforecast.R;
+import com.santoni7.weatherforecast.model.DailyForecastMap;
+import com.santoni7.weatherforecast.model.Forecast;
+import com.santoni7.weatherforecast.model.ForecastByHour;
 
 import java.util.List;
 
@@ -39,7 +42,7 @@ public class DailyForecastAdapter extends RecyclerView.Adapter<DailyForecastAdap
     public void onBindViewHolder(ViewHolder holder, int position) {
         if(list == null) return;
         ForecastByHour fbh = list.get(position);
-        JsonResponseWrapper.Forecast midday = fbh.getMiddayForecast();
+        Forecast midday = fbh.getMiddayForecast();
         holder.txtDayName.setText(Helpers.GetShortDayString(fbh.getMiddayForecast()));
         holder.txtIcon.setTypeface(iconTypeface);
         String icName = Helpers.GetIconName(midday);
@@ -64,11 +67,11 @@ public class DailyForecastAdapter extends RecyclerView.Adapter<DailyForecastAdap
         TextView txtMaxTemp;
         public ViewHolder(View v) {
             super(v);
-            txtDayName = (TextView) v.findViewById(R.id.il_txtDayName);
-            txtDescription = (TextView) v.findViewById(R.id.il_txtDescription);
-            txtIcon = (TextView) v.findViewById(R.id.il_txtIcon);
-            txtMaxTemp = (TextView) v.findViewById(R.id.il_txtTempMax);
-            txtMinTemp = (TextView) v.findViewById(R.id.il_txtTempMin);
+            txtDayName = v.findViewById(R.id.il_txtDayName);
+            txtDescription = v.findViewById(R.id.il_txtDescription);
+            txtIcon = v.findViewById(R.id.il_txtIcon);
+            txtMaxTemp = v.findViewById(R.id.il_txtTempMax);
+            txtMinTemp = v.findViewById(R.id.il_txtTempMin);
 
         }
     }

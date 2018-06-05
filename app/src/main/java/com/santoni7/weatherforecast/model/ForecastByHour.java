@@ -1,12 +1,14 @@
-package com.santoni7.weatherforecast.util;
+package com.santoni7.weatherforecast.model;
 
+
+import com.santoni7.weatherforecast.model.Forecast;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 
-//Key is hour
-public class ForecastByHour extends TreeMap<Integer, JsonResponseWrapper.Forecast> {
+//Forecast for each hour value
+public class ForecastByHour extends TreeMap<Integer, Forecast> {
     private List<Double> temperatures;
     private List<Double> humidity;
     private double minTemp = Double.MAX_VALUE;
@@ -22,7 +24,7 @@ public class ForecastByHour extends TreeMap<Integer, JsonResponseWrapper.Forecas
         return maxTemp;
     }
 
-    public JsonResponseWrapper.Forecast tryGet(int key){
+    public Forecast tryGet(int key){
         if(containsKey(key)){
             return get(key);
         }
@@ -30,14 +32,14 @@ public class ForecastByHour extends TreeMap<Integer, JsonResponseWrapper.Forecas
             return get(keySet().toArray()[key/3]);
         }
     }
-    public JsonResponseWrapper.Forecast getMiddayForecast(){
+    public Forecast getMiddayForecast(){
         if(containsKey(12))
             return get(12);
 
         return get(firstKey());
     }
-    public List<JsonResponseWrapper.Forecast> asList(){
-        List<JsonResponseWrapper.Forecast> res = new ArrayList<>();
+    public List<Forecast> asList(){
+        List<Forecast> res = new ArrayList<>();
         for(Integer key : keySet()){
             res.add(get(key));
         }
@@ -58,7 +60,7 @@ public class ForecastByHour extends TreeMap<Integer, JsonResponseWrapper.Forecas
         ArrayList<Double> temp = new ArrayList<>();
         ArrayList<Double> hum = new ArrayList<>();
         for (int k : keySet()) {
-            JsonResponseWrapper.Forecast item = get(k);
+            Forecast item = get(k);
             double t = item.getTemperature();
             double h = item.getHumidity();
             if(t<minTemp) minTemp = t;

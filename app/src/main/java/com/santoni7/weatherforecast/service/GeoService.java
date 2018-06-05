@@ -59,7 +59,7 @@ public class GeoService extends IntentService {
                             .build();
                     mGoogleApiClient.connect();
                     mLocationRequest = LocationRequest.create()
-                            .setPriority(LocationRequest.PRIORITY_LOW_POWER)
+                            .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
                             .setInterval(10 * 1000)      //10sec
                             .setFastestInterval(1000);
                 }
@@ -103,17 +103,18 @@ public class GeoService extends IntentService {
         private void sendResult() throws IOException {
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
             Intent resultIntent = new Intent();
+
             resultIntent.setAction(ACTION_LOCATION_RESULT)
                     .addCategory(Intent.CATEGORY_DEFAULT);
             String location_str = "lat=" + mLastLocation.getLatitude() + "&lon=" + mLastLocation.getLongitude();
             resultIntent.putExtra(EXTRA_LOCATION_OUT, location_str);
+
             Geocoder geocoder = new Geocoder(GeoService.this, Locale.getDefault());
             List<Address> list = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1);
             String cityStr = list.get(0).getLocality();
+
             if(list.size()>0){
                 resultIntent.putExtra(EXTRA_CITY_OUT, cityStr);
-                Address address = list.get(0);
-
                 resultIntent.putExtra(EXTRA_CITY_LOCALIZED_OUT, list.get(0).getLocality());
             }
             resultIntent.putExtra(EXTRA_RESULTOK_OUT, true);
