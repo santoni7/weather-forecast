@@ -37,7 +37,6 @@ public class JsonParser {
             JSONArray arr = json.getJSONArray("list");
 
             forecastByDay = new DailyForecastMap();
-            ForecastByHour lastFBH = null;
             int minDay = 366;
             for (int i = 0; i < cnt; ++i) {
                 JSONObject obj = arr.getJSONObject(i);
@@ -67,7 +66,6 @@ public class JsonParser {
                 forecast.setHumidity(main.getInt("humidity"));
 
                 // TODO: support for several weather conditions (https://openweathermap.org/weather-conditions) => parse if misty
-
 
                 JSONObject weatherObj = obj.getJSONArray("weather").getJSONObject(0);
                 forecast.setWeather_id(weatherObj.getInt("id"));

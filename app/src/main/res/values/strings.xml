@@ -10,7 +10,7 @@
     <string name="lbl_day">Днем</string>
     <string name="lbl_morning">Утром</string>
     <string name="copyright_footer">Данные о погоде с сайта openweathermap.com</string>
-    <string name="about_message">Author:\tAnton Sakhniuk.\nData from:\topenweathermap.com\nSources:\tgithub.com/santoni7</string>
+    <string name="about_message">Andrew Klapick</string>
     <string name="about_title">Weather Forecast</string>
 
 

@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
@@ -31,10 +30,8 @@ import com.santoni7.weatherforecast.util.JsonParser;
 import com.santoni7.weatherforecast.util.OfflineWeatherStorage;
 import com.santoni7.weatherforecast.util.PreferenceManager;
 
-import java.util.Calendar;
-
 public class MainActivity extends AppCompatActivity implements MainContract.View {
-    private final static String TAG = "MainActivity";
+    private final static String TAG = MainActivity.class.getSimpleName();
 
     MainContract.Presenter presenter;
     WeatherBroadcastReceiver weatherBroadcastReceiver;
@@ -59,6 +56,15 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                Log.e(TAG, "Error occurred: " + e.getMessage());
+                e.fillInStackTrace();
+            }
+        });
+
         setContentView(R.layout.activity_main);
         PreferenceManager.getInstance(this);
 
@@ -108,17 +114,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @Override
     public void updateView(JsonParser jsonParser) {
-        mainFragment.updateData(jsonParser, geoData);
-    }
-
-    @Override
-    public Context getContext() {
-        return getApplicationContext();
-    }
-
-    @Override
-    public SharedPreferences getDefaultPreferences() {
-        return null;
+        mainFragment.updateView(jsonParser, geoData);
     }
 
     void buildProgressDialog() {
@@ -224,10 +220,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @Override
     public void requestWeatherUpdate(GeoData data) {
-//        if (geoData.locationName == null || geoData.locationName.isEmpty()) {
-//            Toast.makeText(this, "Could not request weather update: unknown location", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
         weatherPullIntent = new Intent(this, WeatherPullService.class);
         weatherPullIntent.putExtra(WeatherPullService.EXTRA_LOCATIONTYPE, String.valueOf(WeatherPullService.LocationType.BY_CITY))
                 .putExtra(WeatherPullService.EXTRA_LOCATION, data.locationName)

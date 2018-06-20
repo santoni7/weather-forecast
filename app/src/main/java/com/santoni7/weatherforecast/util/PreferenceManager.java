@@ -17,6 +17,7 @@ public class PreferenceManager {
     static final String PREF_LAST_UPDATE = "LastUpdate";
     private SharedPreferences prefs;
 
+
     private PreferenceManager(SharedPreferences preferences) {
         this.prefs = preferences;
     }

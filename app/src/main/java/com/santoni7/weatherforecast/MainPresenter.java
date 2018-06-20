@@ -15,6 +15,36 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
     private static final String TAG = MainPresenter.class.getSimpleName();
     Calendar lastUpdate;
     GeoData geoData = new GeoData(false, "Kyiv", "Київ");
+
+
+    @Override
+    public void onCreated() {
+        PreferenceManager preferenceManager = PreferenceManager.getInstance();
+
+        String location = preferenceManager.getLocationName();
+        if (location != null) {
+            geoData.locationName = preferenceManager.getLocationName();
+            geoData.locationNameLocalized = preferenceManager.getLocationNameLocalized();
+            geoData.lastUpdate = Calendar.getInstance();
+            getView().requestWeatherUpdate(geoData);
+        }
+
+        getView().requestGeoUpdate();
+    }
+
+    @Override
+    public void onGeoResult(GeoData geoData) {
+        this.geoData = geoData;
+        PreferenceManager pm = PreferenceManager.getInstance();
+        if(pm != null && geoData.success){
+            pm.setLastUpdated(geoData.lastUpdate.getTimeInMillis());
+            pm.setLocationName(geoData.locationName);
+            pm.setLocationNameLocalized(geoData.locationNameLocalized);
+        }
+        if (getView() != null)
+            getView().requestWeatherUpdate(geoData);
+    }
+
     @Override
     public void onWeatherResult(String res) {
         Log.i(TAG, "onWeatherResult: " + res);
@@ -22,30 +52,12 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
         lastUpdate = Calendar.getInstance();
 
         PreferenceManager.getInstance().setLastUpdated(lastUpdate.getTimeInMillis());
-//        mainFragment.updateData();
-//        mainFragment.updateData(wrapper, currentCityLocalized, lastUpdate);
         getView().updateView(jp);
     }
 
     @Override
-    public void onCreated() {
-        PreferenceManager preferenceManager = PreferenceManager.getInstance();
-
-        String location = preferenceManager.getLocationName();
-        if(location != null){
-            geoData.locationName = preferenceManager.getLocationName();
-            geoData.locationNameLocalized = preferenceManager.getLocationNameLocalized();
-            geoData.lastUpdate = Calendar.getInstance();
-        }
-
-        getView().requestGeoUpdate();
-
-
-    }
-
-    @Override
     public void onResume() {
-
+        getView().requestGeoUpdate();
     }
 
     @Override
@@ -55,16 +67,10 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
 
     @Override
     public void onGpsNotAvailable() {
-        if(getView() != null)
+        if (getView() != null)
             getView().alertDialogNoGPS();
     }
 
-    @Override
-    public void onGeoResult(GeoData geoData) {
-        this.geoData = geoData;
-        if(getView() != null)
-            getView().requestWeatherUpdate(geoData);
-    }
 
     @Override
     public void onBtnClick(int id) {

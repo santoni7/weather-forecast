@@ -1,8 +1,5 @@
 package com.santoni7.weatherforecast;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
 import com.santoni7.weatherforecast.model.GeoData;
 import com.santoni7.weatherforecast.mvp.MvpPresenter;
 import com.santoni7.weatherforecast.mvp.MvpView;
@@ -17,8 +14,6 @@ public class MainContract {
         void requestGeoUpdate();
         void requestWeatherUpdate(GeoData geo);
         void updateView(JsonParser jsonParser);
-        Context getContext();
-        SharedPreferences getDefaultPreferences();
     }
 
     interface Presenter extends MvpPresenter<View>{

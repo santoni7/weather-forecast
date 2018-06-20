@@ -1,8 +1,6 @@
 package com.santoni7.weatherforecast.model;
 
 
-import com.santoni7.weatherforecast.model.Forecast;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;

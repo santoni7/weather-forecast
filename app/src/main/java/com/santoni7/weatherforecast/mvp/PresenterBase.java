@@ -23,6 +23,6 @@ public class PresenterBase<T extends MvpView> implements MvpPresenter<T> {
 
     @Override
     public void destroy() {
-
+        this.view = null;
     }
 }

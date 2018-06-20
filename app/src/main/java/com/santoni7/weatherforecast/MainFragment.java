@@ -17,13 +17,12 @@ import android.widget.TextView;
 
 import com.santoni7.weatherforecast.model.Forecast;
 import com.santoni7.weatherforecast.model.GeoData;
-import com.santoni7.weatherforecast.util.DailyForecastAdapter;
+import com.santoni7.weatherforecast.recycler.DailyRecyclerAdapter;
 import com.santoni7.weatherforecast.model.ForecastByHour;
-import com.santoni7.weatherforecast.util.Helpers;
+import com.santoni7.weatherforecast.util.TextHelpers;
 import com.santoni7.weatherforecast.util.JsonParser;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Locale;
 
 
@@ -90,7 +89,7 @@ public class MainFragment extends Fragment {
     void setIcon(TextView target, String str) {
         target.setTypeface(typefaceIcons);
         target.setText(str);
-        if (Helpers.IsIconYellow(str)) {
+        if (TextHelpers.IsIconYellow(str)) {
             target.setTextColor(ContextCompat.getColor(getContext(), R.color.colorYellow));
         } else {
             target.setTextColor(ContextCompat.getColor(getContext(), R.color.colorIcon));
@@ -153,21 +152,21 @@ public class MainFragment extends Fragment {
     @Override
     public void onResume() {
 
-        if (jsonParser != null) updateData();
+        if (jsonParser != null) updateView();
         super.onResume();
     }
 
-    public void updateData(JsonParser wrapper, GeoData geo) {
-        setData(wrapper, geo);
-        updateData();
+    public void updateView(JsonParser jsonParser, GeoData geo) {
+        setData(jsonParser, geo);
+        updateView();
         
     }
 
-    public void updateData() {
+    public void updateView() {
         if (jsonParser == null ||
                 txtLargeTemp == null ||
                 jsonParser.getForecastByDay().isEmpty()) {
-            Log.e(TAG, "updateData() failed");
+            Log.e(TAG, "updateView() failed");
             return;
         }
         ForecastByHour fbh = jsonParser.getForecastByDay().firstEntry().getValue();
@@ -177,12 +176,12 @@ public class MainFragment extends Fragment {
         } else {
             txtLargeIcon.setTextColor(ContextCompat.getColor(getContext(), R.color.colorGrey));
         }
-        setIcon(txtLargeIcon, Helpers.GetIconName(current));
-        txtLargeTemp.setText(Helpers.GetTemperatureString(current.getTemperature()));
+        setIcon(txtLargeIcon, TextHelpers.GetIconName(current));
+        txtLargeTemp.setText(TextHelpers.GetTemperatureString(current.getTemperature()));
         if (geoData != null)
             txtCity.setText(geoData.locationNameLocalized);
-        txtDescription.setText(Helpers.FirstToUpperCase(current.getWeatherDescription()));
-        txtDayDate.setText(Helpers.GetDayDateString(current));
+        txtDescription.setText(TextHelpers.FirstToUpperCase(current.getWeatherDescription()));
+        txtDayDate.setText(TextHelpers.GetDayDateString(current));
 
         setTodayTemperatures(fbh);
 
@@ -190,7 +189,7 @@ public class MainFragment extends Fragment {
         String windStr = Math.round(current.getWind_speed() * 100) / 100.0 + "m/s";
         txtWind.setText(windStr);
 
-        DailyForecastAdapter adapter = new DailyForecastAdapter(jsonParser.getForecastByDay(), typefaceIcons);
+        DailyRecyclerAdapter adapter = new DailyRecyclerAdapter(jsonParser.getForecastByDay(), typefaceIcons);
         recyclerView.setAdapter(adapter);
 
         if (geoData != null && geoData.lastUpdate != null) {
@@ -205,8 +204,8 @@ public class MainFragment extends Fragment {
         //morning
         if (fbh.size() >= 7) {
             Forecast f = fbh.get(6);
-            txtTempMorning.setText(Helpers.GetTemperatureString(f.getTemperature()));
-            setIcon(ic_morning, Helpers.GetIconName(f));
+            txtTempMorning.setText(TextHelpers.GetTemperatureString(f.getTemperature()));
+            setIcon(ic_morning, TextHelpers.GetIconName(f));
         } else {
             txtTempMorning.setText("-");
             ic_morning.setVisibility(View.INVISIBLE);
@@ -214,12 +213,12 @@ public class MainFragment extends Fragment {
         //day
         if (fbh.size() >= 5) {
             Forecast f = fbh.get(12);
-            txtTempDay.setText(Helpers.GetTemperatureString(f.getTemperature()));
-            setIcon(ic_day, Helpers.GetIconName(f));
+            txtTempDay.setText(TextHelpers.GetTemperatureString(f.getTemperature()));
+            setIcon(ic_day, TextHelpers.GetIconName(f));
         } else if (fbh.size() >= 4) {
             Forecast f = fbh.get(15);
-            txtTempDay.setText(Helpers.GetTemperatureString(f.getTemperature()));
-            setIcon(ic_day, Helpers.GetIconName(f));
+            txtTempDay.setText(TextHelpers.GetTemperatureString(f.getTemperature()));
+            setIcon(ic_day, TextHelpers.GetIconName(f));
         } else {
             txtTempDay.setText("-");
             ic_day.setVisibility(View.INVISIBLE);
@@ -227,12 +226,12 @@ public class MainFragment extends Fragment {
         //evening
         if (fbh.size() >= 3) {
             Forecast f = fbh.get(18);
-            txtTempEvening.setText(Helpers.GetTemperatureString(f.getTemperature()));
-            setIcon(ic_evening, Helpers.GetIconName(f));
+            txtTempEvening.setText(TextHelpers.GetTemperatureString(f.getTemperature()));
+            setIcon(ic_evening, TextHelpers.GetIconName(f));
         } else if (fbh.size() >= 2) {
             Forecast f = fbh.get(21);
-            txtTempEvening.setText(Helpers.GetTemperatureString(f.getTemperature()));
-            setIcon(ic_evening, Helpers.GetIconName(f));
+            txtTempEvening.setText(TextHelpers.GetTemperatureString(f.getTemperature()));
+            setIcon(ic_evening, TextHelpers.GetIconName(f));
         } else {
             txtTempEvening.setText("-");
             ic_evening.setVisibility(View.INVISIBLE);
@@ -242,16 +241,16 @@ public class MainFragment extends Fragment {
         if (jsonParser.getForecastByDay().size() > 1) {
             Forecast f = jsonParser.getForecastByDay().get(1).firstEntry().getValue();
             double temperature = f.getTemperature();
-            txtTempNight.setText(Helpers.GetTemperatureString(temperature));
-            setIcon(ic_night, Helpers.GetIconName(f));
+            txtTempNight.setText(TextHelpers.GetTemperatureString(temperature));
+            setIcon(ic_night, TextHelpers.GetIconName(f));
             if (temperature < minTemp) minTemp = temperature;
         } else {
             txtTempNight.setText("-");
             ic_night.setVisibility(View.INVISIBLE);
         }
 
-        txtMaxTemp.setText(Helpers.GetTemperatureString(fbh.getMaxTemp()));
-        txtMinTemp.setText(Helpers.GetTemperatureString(minTemp));
+        txtMaxTemp.setText(TextHelpers.GetTemperatureString(fbh.getMaxTemp()));
+        txtMinTemp.setText(TextHelpers.GetTemperatureString(minTemp));
 
 
     }
