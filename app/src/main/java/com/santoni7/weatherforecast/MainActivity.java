@@ -209,7 +209,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         checkPermission();
         final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         boolean forceUpdate = geoData.locationName == null;
-        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        if (manager == null || !manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             alertDialogNoGPS();
             forceUpdate = true;
         }

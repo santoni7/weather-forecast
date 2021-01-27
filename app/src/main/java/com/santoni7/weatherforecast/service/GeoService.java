@@ -17,12 +17,13 @@ import com.google.android.gms.tasks.Task;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.IntentService;
+import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
@@ -32,9 +33,10 @@ import java.util.List;
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 
-public class GeoService extends IntentService {
+public class GeoService extends Service {
     private final String TAG = "GeoService";
     Location mLastLocation;
     private LocationRequest mLocationRequest;
@@ -42,7 +44,7 @@ public class GeoService extends IntentService {
 
 
     public GeoService() {
-        super("geoservice");
+        super();
     }
 
     public final static String ACTION_LOCATION_RESULT = "com.santoni7.weatherforecast.GeoService.LOCATION_RESULT";
@@ -65,6 +67,7 @@ public class GeoService extends IntentService {
             try {
                 sendResult();
                 fusedLocationClient.removeLocationUpdates(this);
+                stopSelf();
             } catch (Throwable t) {
                 Log.e(TAG, "Error when sending result: " + t.getLocalizedMessage(), t);
             }
@@ -77,14 +80,22 @@ public class GeoService extends IntentService {
         }
     };
 
+    @Nullable
     @Override
-    protected void onHandleIntent(Intent intent) {
-        Log.i(TAG, "onHandleIntent");
-        forceUpdate = intent.getBooleanExtra(EXTRA_FORCE_UPDATE, false);
-        initApi();
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
-    private void initApi() {
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if(intent != null) {
+            forceUpdate = intent.getBooleanExtra(EXTRA_FORCE_UPDATE, false);
+        }
+        initLocationServices();
+        return START_NOT_STICKY;
+    }
+
+    private void initLocationServices() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(GeoService.this);
 
         createLocationRequest();
@@ -120,9 +131,9 @@ public class GeoService extends IntentService {
 
     protected void createLocationRequest() {
         mLocationRequest = LocationRequest.create();
-        mLocationRequest.setInterval(2000);
-        mLocationRequest.setFastestInterval(1000);
-        mLocationRequest.setNumUpdates(10);
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(2000);
+        mLocationRequest.setNumUpdates(1);
         mLocationRequest.setSmallestDisplacement(0);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
@@ -173,7 +184,7 @@ public class GeoService extends IntentService {
     private void sendErrorResponse() {
         Log.i(TAG, "GoogleApiCallbacks/sendErrorResponse");
         if (forceUpdate) {
-            initApi();
+            initLocationServices();
         }
         Intent resultIntent = new Intent()
                 .setAction(ACTION_LOCATION_RESULT)
@@ -185,7 +196,7 @@ public class GeoService extends IntentService {
     private void sendErrorResponse(ResolvableApiException e) {
         Log.i(TAG, "GoogleApiCallbacks/sendErrorResponse+ResolvableAPIException");
         if (forceUpdate) {
-            initApi();
+            initLocationServices();
         }
         Intent resultIntent = new Intent()
                 .setAction(ACTION_LOCATION_RESULT)
