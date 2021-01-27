@@ -1,161 +1,241 @@
 package com.santoni7.weatherforecast.service;
 
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.IntentService;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
-import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.os.Looper;
 import android.util.Log;
-
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-//Todo: GeoService not available on android 4.4
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+
 public class GeoService extends IntentService {
     private final String TAG = "GeoService";
-    GoogleApiClient mGoogleApiClient;
     Location mLastLocation;
     private LocationRequest mLocationRequest;
+    private FusedLocationProviderClient fusedLocationClient;
+
+
     public GeoService() {
         super("geoservice");
     }
 
     public final static String ACTION_LOCATION_RESULT = "com.santoni7.weatherforecast.GeoService.LOCATION_RESULT";
     public final static String EXTRA_RESULTOK_OUT = "com.santoni7.weatherforecast.GeoService.EXTRA_RESULTOK_OUT";
+    public final static String EXTRA_EXCEPTION_OUT = "com.santoni7.weatherforecast.GeoService.EXTRA_EXCEPTION_OUT";
     public final static String EXTRA_LOCATION_OUT = "com.santoni7.weatherforecast.GeoService.EXTRA_LOCATION_OUT";
     public final static String EXTRA_CITY_OUT = "com.santoni7.weatherforecast.GeoService.EXTRA_CITY_OUT";
-    public final static String EXTRA_CITY_LOCALIZED_OUT = "com.santoni7.weatherforecast.GeoService.EXTRA_CITY_LOCALIZED_OUT";
+    public final static String EXTRA_CITY_LOCALIZED_OUT =
+            "com.santoni7.weatherforecast.GeoService.EXTRA_CITY_LOCALIZED_OUT";
 
     public final static String EXTRA_FORCE_UPDATE = "com.santoni7.weatherforecast.GeoService.EXTRA_FORCE_UPDATE";
     boolean forceUpdate = false;
+
+    private final LocationCallback mLocationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(LocationResult locationResult) {
+            super.onLocationResult(locationResult);
+            Log.d(TAG, "OnLocationResult (updates service): " + locationResult.toString());
+            mLastLocation = locationResult.getLastLocation();
+            try {
+                sendResult();
+                fusedLocationClient.removeLocationUpdates(this);
+            } catch (Throwable t) {
+                Log.e(TAG, "Error when sending result: " + t.getLocalizedMessage(), t);
+            }
+        }
+
+        @Override
+        public void onLocationAvailability(LocationAvailability locationAvailability) {
+            super.onLocationAvailability(locationAvailability);
+            Log.d(TAG, "onLocationAvailability: " + locationAvailability.isLocationAvailable());
+        }
+    };
+
     @Override
     protected void onHandleIntent(Intent intent) {
         Log.i(TAG, "onHandleIntent");
         forceUpdate = intent.getBooleanExtra(EXTRA_FORCE_UPDATE, false);
-        initApi(0);
+        initApi();
     }
 
-    private void initApi(int delay) {
-        android.os.Handler handler = new android.os.Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                GoogleApiCallbacks callbacks = new GoogleApiCallbacks();
-                if (mGoogleApiClient == null) {
-                    mGoogleApiClient = new GoogleApiClient.Builder(getApplicationContext())
-                            .addApi(LocationServices.API)
-                            .addConnectionCallbacks(callbacks)
-                            .addOnConnectionFailedListener(callbacks)
-                            .build();
-                    mGoogleApiClient.connect();
-                    mLocationRequest = LocationRequest.create()
-                            .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
-                            .setInterval(10 * 1000)      //10sec
-                            .setFastestInterval(1000);
-                }
-                else{
-                    mGoogleApiClient.reconnect();
-                }
-            }
-        }, delay);
+    private void initApi() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(GeoService.this);
 
+        createLocationRequest();
+        requestSettings();
+
+        Log.d(TAG, "clients set up");
+    }
+
+    private void onSettingsReady() {
+        requestLastLocation();
+        requestLocationUpdates();
+    }
+
+    private void requestSettings() {
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(mLocationRequest);
+        SettingsClient client = LocationServices.getSettingsClient(this);
+        Task<LocationSettingsResponse> task = client.checkLocationSettings(builder.build());
+        task.addOnSuccessListener(new OnSuccessListener<LocationSettingsResponse>() {
+            @Override
+            public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
+                Log.d(TAG, "Location settings response: " + locationSettingsResponse);
+                onSettingsReady();
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Log.e(TAG, "Error while getting location settings", e);
+                onSettingsRequestFailure(e);
+            }
+        });
+    }
+
+    protected void createLocationRequest() {
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setInterval(2000);
+        mLocationRequest.setFastestInterval(1000);
+        mLocationRequest.setNumUpdates(10);
+        mLocationRequest.setSmallestDisplacement(0);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
     @Override
     public void onDestroy() {
-        //mGoogleApiClient.disconnect();
-
+        fusedLocationClient.removeLocationUpdates(mLocationCallback);
         super.onDestroy();
     }
 
-    private class GoogleApiCallbacks implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener{
-        @Override
-        public void onConnected(@Nullable Bundle bundle) {
-            Log.i(TAG, "GoogleApiCallbacks/onConnected");
-            try {
-                mLastLocation =LocationServices.FusedLocationApi.getLastLocation (mGoogleApiClient);
-
-                if (mLastLocation != null) {
-                    sendResult();
-                }
-                else{
-                    LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-                    sendErrorResponse();
-                }
-            }
-            catch (SecurityException | IOException se){
-                se.fillInStackTrace();
-                Log.e(TAG, se.getMessage());
-                sendErrorResponse();
-            }
+    /**
+     * Looks for last known location. Sets up location update requests
+     */
+    private void requestLocationUpdates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Illegal State: Missing GPS permission", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Illegal State: Missing GPS permission");
+            return;
         }
+        fusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.getMainLooper());
+    }
 
-        private void sendResult() throws IOException {
-            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-            Intent resultIntent = new Intent();
+    private void sendResult() throws IOException {
+        Intent resultIntent = new Intent();
 
-            resultIntent.setAction(ACTION_LOCATION_RESULT)
+        resultIntent.setAction(ACTION_LOCATION_RESULT)
                     .addCategory(Intent.CATEGORY_DEFAULT);
-            String location_str = "lat=" + mLastLocation.getLatitude() + "&lon=" + mLastLocation.getLongitude();
-            resultIntent.putExtra(EXTRA_LOCATION_OUT, location_str);
+        String location_str = "lat=" + mLastLocation.getLatitude() + "&lon=" + mLastLocation.getLongitude();
+        resultIntent.putExtra(EXTRA_LOCATION_OUT, location_str);
 
-            Geocoder geocoder = new Geocoder(GeoService.this, Locale.getDefault());
-            List<Address> list = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1);
-            String cityStr = list.get(0).getLocality();
+        Geocoder geocoder = new Geocoder(GeoService.this, Locale.getDefault());
+        List<Address> list = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1);
+        String cityStr = list.get(0).getLocality();
 
-            if(list.size()>0){
-                resultIntent.putExtra(EXTRA_CITY_OUT, cityStr);
-                resultIntent.putExtra(EXTRA_CITY_LOCALIZED_OUT, list.get(0).getLocality());
-            }
-            resultIntent.putExtra(EXTRA_RESULTOK_OUT, true);
-
-
-            Log.i(TAG, "Sending result: " + location_str + "; City: " + cityStr);
-            sendBroadcast(resultIntent);
+        if (list.size() > 0) {
+            resultIntent.putExtra(EXTRA_CITY_OUT, cityStr);
+            resultIntent.putExtra(EXTRA_CITY_LOCALIZED_OUT, list.get(0).getLocality());
         }
+        resultIntent.putExtra(EXTRA_RESULTOK_OUT, true);
 
-        @Override
-        public void onConnectionSuspended(int i) {
-            Log.i(TAG, "GoogleApiCallbacks/onConnectionSuspended");
+        Log.d(TAG, "Sending result: " + location_str + "; City: " + cityStr);
+        sendBroadcast(resultIntent);
+    }
+
+    private void sendErrorResponse() {
+        Log.i(TAG, "GoogleApiCallbacks/sendErrorResponse");
+        if (forceUpdate) {
+            initApi();
+        }
+        Intent resultIntent = new Intent()
+                .setAction(ACTION_LOCATION_RESULT)
+                .addCategory(Intent.CATEGORY_DEFAULT)
+                .putExtra(EXTRA_RESULTOK_OUT, false);
+        sendBroadcast(resultIntent);
+    }
+
+    private void sendErrorResponse(ResolvableApiException e) {
+        Log.i(TAG, "GoogleApiCallbacks/sendErrorResponse+ResolvableAPIException");
+        if (forceUpdate) {
+            initApi();
+        }
+        Intent resultIntent = new Intent()
+                .setAction(ACTION_LOCATION_RESULT)
+                .addCategory(Intent.CATEGORY_DEFAULT)
+                .putExtra(EXTRA_RESULTOK_OUT, false)
+                .putExtra(EXTRA_EXCEPTION_OUT, e);
+        sendBroadcast(resultIntent);
+    }
+
+    private void onSettingsRequestFailure(Exception e) {
+        if (e instanceof ResolvableApiException) {
+            ResolvableApiException resolvable = (ResolvableApiException) e;
+            sendErrorResponse(resolvable);
+        } else {
             sendErrorResponse();
         }
+    }
 
-        private void sendErrorResponse() {
-            Log.i(TAG, "GoogleApiCallbacks/sendErrorResponse");
-            if(forceUpdate)
-                initApi(4000);
-            Intent resultIntent = new Intent().setAction(ACTION_LOCATION_RESULT)
-                    .addCategory(Intent.CATEGORY_DEFAULT)
-                    .putExtra(EXTRA_RESULTOK_OUT, false);
-            sendBroadcast(resultIntent);
-        }
-
-        @Override
-        public void onLocationChanged(Location location) {
-            Log.d(TAG, "GoogleApiCallbacks/onLocationChanged");
-            mLastLocation = location;
-            try {
-                sendResult();
-            }
-            catch (IOException e){
-                e.fillInStackTrace();
-            }
-        }
-
-        @Override
-        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-            Log.i(TAG, "GoogleApiCallbacks/onConnectionFailed");
-            sendErrorResponse();
-        }
+    @SuppressLint("MissingPermission")
+    private void requestLastLocation() {
+        fusedLocationClient
+                .getLastLocation()
+                .addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location != null) {
+                            Log.d(TAG, "Got location: " + location);
+                            mLastLocation = location;
+                            try {
+                                sendResult();
+                            } catch (Throwable t) {
+                                Log.e(TAG, "Error when sending result: " + t.getLocalizedMessage(), t);
+                            }
+                        } else {
+                            Log.e(TAG, "On location success, but location = null");
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e(TAG, "Error getting last location: " + e.getLocalizedMessage(), e);
+                        sendErrorResponse();
+                    }
+                })
+                .addOnCompleteListener(new OnCompleteListener<Location>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Location> task) {
+                        Log.d(TAG, "get last location complete: success=" + task.isSuccessful());
+                    }
+                });
     }
 }

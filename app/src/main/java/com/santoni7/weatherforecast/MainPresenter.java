@@ -14,7 +14,7 @@ import java.util.Calendar;
 public class MainPresenter extends PresenterBase<MainContract.View> implements MainContract.Presenter {
     private static final String TAG = MainPresenter.class.getSimpleName();
     Calendar lastUpdate;
-    GeoData geoData = new GeoData(false, "Kyiv", "Київ");
+    GeoData geoData = new GeoData(false, "London", "London");
 
 
     @Override
@@ -82,6 +82,7 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
                 break;
             case R.id.btnRefresh:
                 getView().requestWeatherUpdate(geoData);
+                getView().requestGeoUpdate();
                 break;
         }
     }

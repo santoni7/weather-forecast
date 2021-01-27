@@ -13,6 +13,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.santoni7.weatherforecast.model.Forecast;
@@ -29,6 +30,7 @@ import java.util.Locale;
 public class MainFragment extends Fragment {
 
     private static final String TAG = MainFragment.class.getSimpleName();
+    ImageButton btnUpdate;
     TextView txtLargeIcon;
     TextView txtLargeTemp;
     TextView txtCity;
@@ -99,6 +101,14 @@ public class MainFragment extends Fragment {
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        btnUpdate = (ImageButton) view.findViewById(R.id.btnRefresh);
+        btnUpdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((MainActivity)getActivity()).onBtnClick(v);
+            }
+        });
+
         txtLargeIcon = (TextView) view.findViewById(R.id.txtLargeIcon);
         setDefaultIcon(txtLargeIcon);
         txtLargeTemp = (TextView) view.findViewById(R.id.txtLargeTemp);
@@ -145,6 +155,7 @@ public class MainFragment extends Fragment {
 
 
         txtLastUpdate = (TextView) view.findViewById(R.id.txtLastUpdate);
+
 
     }
 

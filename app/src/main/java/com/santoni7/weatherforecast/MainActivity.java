@@ -11,6 +11,8 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.provider.Settings;
+
+import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentTransaction;
@@ -138,7 +140,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     public void onBtnClick(View v) {
         presenter.onBtnClick(v.getId());
     }
-
 
     @Override
     public void alertDialogNoGPS() {
@@ -272,14 +273,16 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                     pm.setLocationName(geoData.locationName);
                     pm.setLocationNameLocalized(geoData.locationNameLocalized);
                     presenter.onGeoResult(geoData);
-//                    Log.d(TAG, "GeoServiceReceiver/success: " + geoData.locationName);
+                    Log.d(TAG, "GeoServiceReceiver/success: " + geoData.locationName);
                 } else {
                     if (loadingDialog != null && loadingDialog.isShowing() && System.currentTimeMillis() - ldStartedMs > GEO_TIMEOUT) {
                         loadingDialog.cancel();
                         alertDialogNoGPS();
                         ldStartedMs = System.currentTimeMillis();
                     }
-//                    Log.d(TAG, "GeoServiceReceiver/error");
+                    ResolvableApiException e = (ResolvableApiException) intent.getSerializableExtra(GeoService.EXTRA_EXCEPTION_OUT);
+
+                    Log.d(TAG, "GeoServiceReceiver/error");
                 }
             } catch (Exception e) {
                 e.fillInStackTrace();
