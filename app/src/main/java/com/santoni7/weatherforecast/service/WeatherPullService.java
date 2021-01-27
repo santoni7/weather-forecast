@@ -2,7 +2,7 @@ package com.santoni7.weatherforecast.service;
 
 import android.app.IntentService;
 import android.content.Intent;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
@@ -50,6 +50,7 @@ public class WeatherPullService extends IntentService {
                     throw new Exception("locationType not set");
             }
 
+            Log.d(TAG, "Result URL: " + url.toString());
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             try {
                 InputStream in = new BufferedInputStream(conn.getInputStream());
@@ -60,6 +61,8 @@ public class WeatherPullService extends IntentService {
                 conn.disconnect();
             }
         } catch (Exception e){
+            Log.e(TAG, "Error getting response: " + e.toString(), e);
+
             e.fillInStackTrace();
             Intent errorIntent = new Intent()
                     .setAction(ACTION_RESULT)

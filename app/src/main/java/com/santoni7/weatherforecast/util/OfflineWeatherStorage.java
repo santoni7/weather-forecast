@@ -2,7 +2,7 @@ package com.santoni7.weatherforecast.util;
 
 
 import android.content.Context;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.FileInputStream;

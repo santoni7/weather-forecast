@@ -1,6 +1,6 @@
 package com.santoni7.weatherforecast.model;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import java.util.Calendar;
 

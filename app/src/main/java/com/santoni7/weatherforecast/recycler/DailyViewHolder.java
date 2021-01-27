@@ -2,7 +2,7 @@ package com.santoni7.weatherforecast.recycler;
 
 import android.content.Context;
 import android.graphics.Typeface;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 
 import com.santoni7.weatherforecast.model.ForecastByHour;

@@ -2,8 +2,8 @@ package com.santoni7.weatherforecast.recycler;
 
 import android.content.Context;
 import android.graphics.Typeface;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.widget.RecyclerView;
+import androidx.core.content.ContextCompat;
+
 import android.view.View;
 import android.widget.TextView;
 
