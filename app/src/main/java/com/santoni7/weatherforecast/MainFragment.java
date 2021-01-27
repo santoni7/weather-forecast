@@ -31,6 +31,7 @@ public class MainFragment extends Fragment {
 
     private static final String TAG = MainFragment.class.getSimpleName();
     ImageButton btnUpdate;
+    ImageButton btnAbout;
     TextView txtLargeIcon;
     TextView txtLargeTemp;
     TextView txtCity;
@@ -101,13 +102,16 @@ public class MainFragment extends Fragment {
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        btnUpdate = (ImageButton) view.findViewById(R.id.btnRefresh);
-        btnUpdate.setOnClickListener(new View.OnClickListener() {
+        View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 ((MainActivity)getActivity()).onBtnClick(v);
             }
-        });
+        };
+        btnUpdate = (ImageButton) view.findViewById(R.id.btnRefresh);
+        btnUpdate.setOnClickListener(listener);
+        btnAbout = (ImageButton) view.findViewById(R.id.btnAbout);
+        btnAbout.setOnClickListener(listener);
 
         txtLargeIcon = (TextView) view.findViewById(R.id.txtLargeIcon);
         setDefaultIcon(txtLargeIcon);
