@@ -35,7 +35,7 @@ public class WeatherPullService extends IntentService {
         LocationType locationType = LocationType.valueOf(intent.getStringExtra(EXTRA_LOCATIONTYPE));
         String location = intent.getStringExtra(EXTRA_LOCATION);
         openweather_appid = intent.getStringExtra(EXTRA_APPID);
-        Log.i(TAG, "onHandleIntent");
+        Log.i(TAG, "onHandleIntent: location=" + location);
         String res;
         try{
             URL url;

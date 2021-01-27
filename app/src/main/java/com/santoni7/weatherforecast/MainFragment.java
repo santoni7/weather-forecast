@@ -178,8 +178,12 @@ public class MainFragment extends Fragment {
         }
         setIcon(txtLargeIcon, TextHelpers.GetIconName(current));
         txtLargeTemp.setText(TextHelpers.GetTemperatureString(current.getTemperature()));
-        if (geoData != null)
-            txtCity.setText(geoData.locationNameLocalized);
+        if (geoData != null) {
+            txtCity.setText(geoData.locationName);
+            Log.d(TAG, "Location name (localized): " + geoData.locationNameLocalized);
+            Log.d(TAG, "Location name: " + geoData.locationName);
+        }
+        else Log.d(TAG, "GeoData is null");
         txtDescription.setText(TextHelpers.FirstToUpperCase(current.getWeatherDescription()));
         txtDayDate.setText(TextHelpers.GetDayDateString(current));
 

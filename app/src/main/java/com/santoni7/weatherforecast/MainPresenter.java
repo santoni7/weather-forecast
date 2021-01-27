@@ -41,8 +41,10 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
             pm.setLocationName(geoData.locationName);
             pm.setLocationNameLocalized(geoData.locationNameLocalized);
         }
-        if (getView() != null)
+        Log.d(TAG, "OnGeoResult: " + geoData.locationName);
+        if (getView() != null) {
             getView().requestWeatherUpdate(geoData);
+        }
     }
 
     @Override

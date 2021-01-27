@@ -220,6 +220,8 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @Override
     public void requestWeatherUpdate(GeoData data) {
+        Log.d(TAG, "Request weather update: " + data.locationName);
+        geoData = data; // TODO: Verify that it's needed here.
         weatherPullIntent = new Intent(this, WeatherPullService.class);
         weatherPullIntent.putExtra(WeatherPullService.EXTRA_LOCATIONTYPE, String.valueOf(WeatherPullService.LocationType.BY_CITY))
                 .putExtra(WeatherPullService.EXTRA_LOCATION, data.locationName)
@@ -270,12 +272,14 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                     pm.setLocationName(geoData.locationName);
                     pm.setLocationNameLocalized(geoData.locationNameLocalized);
                     presenter.onGeoResult(geoData);
+//                    Log.d(TAG, "GeoServiceReceiver/success: " + geoData.locationName);
                 } else {
                     if (loadingDialog != null && loadingDialog.isShowing() && System.currentTimeMillis() - ldStartedMs > GEO_TIMEOUT) {
                         loadingDialog.cancel();
                         alertDialogNoGPS();
                         ldStartedMs = System.currentTimeMillis();
                     }
+//                    Log.d(TAG, "GeoServiceReceiver/error");
                 }
             } catch (Exception e) {
                 e.fillInStackTrace();
