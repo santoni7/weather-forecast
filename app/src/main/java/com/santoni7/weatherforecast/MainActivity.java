@@ -22,6 +22,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -38,19 +39,15 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     MainContract.Presenter presenter;
     WeatherBroadcastReceiver weatherBroadcastReceiver;
     GeoServiceReceiver geoServiceReceiver;
-    //    String locationName = "London";
-//    String locationNameLocalized;
-//    Calendar lastUpdate;
 
     Intent weatherPullIntent;
-//    JsonParser jsonParser;
     GeoData geoData = new GeoData(false, null, null);
 
     ProgressDialog loadingDialog;
     long ldStartedMs;
     static final long GEO_TIMEOUT = 3000;
 
-    LinearLayout fragmentContainer;
+    FrameLayout fragmentContainer;
 
     MainFragment mainFragment;
 
@@ -90,23 +87,11 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         registerReceiver(geoServiceReceiver, intentFilter);
 
 
-        String weatherJson = OfflineWeatherStorage.Read(this);
 
         mainFragment = new MainFragment();
-        JsonParser jsonParser = null;
-        if (weatherJson != null) {
-            jsonParser = new JsonParser(weatherJson);
-            mainFragment.setData(jsonParser, geoData);
 
-        }
-
-        if (jsonParser == null || jsonParser.getForecastByDay().isEmpty()) {
-            buildProgressDialog();
-        }
-
-
-        fragmentContainer = (LinearLayout) findViewById(R.id.fragment_container);
-
+        // Add MainFragment to fragment_container view inside activity_main.xml layout
+        fragmentContainer = (FrameLayout) findViewById(R.id.fragment_container);
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         ft.add(R.id.fragment_container, mainFragment);
         ft.commit();
@@ -230,6 +215,41 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         startService(weatherPullIntent);
     }
 
+    @Override
+    public void saveWeatherLocally(String weatherJson) {
+        OfflineWeatherStorage.Write(MainActivity.this, weatherJson);
+    }
+
+    @Override
+    public void tryRestoreWeather() {
+        String weatherJson = OfflineWeatherStorage.Read(this);
+        presenter.onWeatherResult(weatherJson, false);
+    }
+
+    public class GeoServiceReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                Log.i(TAG, "GeoServiceReceiver/onReceive");
+                boolean success = intent.getBooleanExtra(GeoService.EXTRA_RESULTOK_OUT, false);
+                if (success) {
+                    geoData = new GeoData(intent);
+                    presenter.onGeoResult(geoData);
+                    Log.d(TAG, "GeoServiceReceiver/success: " + geoData.locationName);
+                } else {
+                    if (loadingDialog != null && loadingDialog.isShowing() && System.currentTimeMillis() - ldStartedMs > GEO_TIMEOUT) {
+                        loadingDialog.cancel();
+                        alertDialogNoGPS();
+                        ldStartedMs = System.currentTimeMillis();
+                    }
+                    Log.d(TAG, "GeoServiceReceiver/error");
+                }
+            } catch (Exception e) {
+                e.fillInStackTrace();
+            }
+        }
+    }
+
     public class WeatherBroadcastReceiver extends BroadcastReceiver {
 
         @Override
@@ -248,46 +268,11 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                 if (result == null || result.equals("error")) {
                     Toast.makeText(context, "Could not pull forecast", Toast.LENGTH_SHORT).show();
                 }
-                OfflineWeatherStorage.Write(MainActivity.this, result);
 
-                presenter.onWeatherResult(result);
-
-
-
+                presenter.onWeatherResult(result, false);
             } catch (Exception e) {
                 e.fillInStackTrace();
             }
         }
     }
-
-
-    public class GeoServiceReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                Log.i(TAG, "GeoServiceReceiver/onReceive");
-                boolean success = intent.getBooleanExtra(GeoService.EXTRA_RESULTOK_OUT, false);
-                if (success) {
-                    geoData = new GeoData(intent);
-                    PreferenceManager pm = PreferenceManager.getInstance();
-                    pm.setLocationName(geoData.locationName);
-                    pm.setLocationNameLocalized(geoData.locationNameLocalized);
-                    presenter.onGeoResult(geoData);
-                    Log.d(TAG, "GeoServiceReceiver/success: " + geoData.locationName);
-                } else {
-                    if (loadingDialog != null && loadingDialog.isShowing() && System.currentTimeMillis() - ldStartedMs > GEO_TIMEOUT) {
-                        loadingDialog.cancel();
-                        alertDialogNoGPS();
-                        ldStartedMs = System.currentTimeMillis();
-                    }
-                    ResolvableApiException e = (ResolvableApiException) intent.getSerializableExtra(GeoService.EXTRA_EXCEPTION_OUT);
-
-                    Log.d(TAG, "GeoServiceReceiver/error");
-                }
-            } catch (Exception e) {
-                e.fillInStackTrace();
-            }
-        }
-    }
-
 }

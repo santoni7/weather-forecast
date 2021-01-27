@@ -270,8 +270,6 @@ public class MainFragment extends Fragment {
 
         txtMaxTemp.setText(TextHelpers.GetTemperatureString(fbh.getMaxTemp()));
         txtMinTemp.setText(TextHelpers.GetTemperatureString(minTemp));
-
-
     }
 
     public void setData(JsonParser jsonParser, GeoData geo) {

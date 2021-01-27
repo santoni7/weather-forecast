@@ -4,22 +4,27 @@ package com.santoni7.weatherforecast.recycler;
 import android.content.Context;
 import android.graphics.Typeface;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
-import android.view.ViewGroup;
 
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import com.santoni7.weatherforecast.R;
 import com.santoni7.weatherforecast.model.DailyForecastMap;
+import com.santoni7.weatherforecast.model.Forecast;
 import com.santoni7.weatherforecast.model.ForecastByHour;
+import com.santoni7.weatherforecast.util.TextHelpers;
 
 import java.util.List;
 
-public class DailyRecyclerAdapter extends RecyclerView.Adapter<DailyViewHolder> {
+public class DailyRecyclerAdapter extends RecyclerView.Adapter<DailyRecyclerAdapter.DailyViewHolder> {
 
     private List<ForecastByHour> list;
     private Typeface iconTypeface;
-    private Context context;
 
-    // Abstract factory instance
-    private ViewHolderFactory factory = new StandardViewHolderFactory();
     public DailyRecyclerAdapter(DailyForecastMap dailyForecastMap, Typeface iconTypeface) {
         this.iconTypeface = iconTypeface;
         list = dailyForecastMap.asList();
@@ -29,16 +34,15 @@ public class DailyRecyclerAdapter extends RecyclerView.Adapter<DailyViewHolder> 
     @NonNull
     @Override
     public DailyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        DailyViewHolder viewHolder = factory.createViewHolder(parent);
-        this.context = parent.getContext();
-        return viewHolder;
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_layout, parent, false);
+        return new DailyViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull DailyViewHolder holder, int position) {
         if(list == null) return;
         ForecastByHour fbh = list.get(position);
-        holder.setData(fbh, context);
+        holder.setData(fbh);
         holder.setTypeface(iconTypeface);
     }
 
@@ -47,4 +51,63 @@ public class DailyRecyclerAdapter extends RecyclerView.Adapter<DailyViewHolder> 
         return list.size();
     }
 
+
+    public class DailyViewHolder extends RecyclerView.ViewHolder {
+        private TextView txtDayName;
+        private TextView txtDescription;
+        private TextView txtIcon;
+        private TextView txtMinTemp;
+        private TextView txtMaxTemp;
+
+        public DailyViewHolder(View v) {
+            super(v);
+            txtDayName = v.findViewById(R.id.il_txtDayName);
+            txtDescription = v.findViewById(R.id.il_txtDescription);
+            txtIcon = v.findViewById(R.id.il_txtIcon);
+            txtMaxTemp = v.findViewById(R.id.il_txtTempMax);
+            txtMinTemp = v.findViewById(R.id.il_txtTempMin);
+        }
+
+        public void setTypeface(Typeface typeface) {
+            getTxtIcon().setTypeface(typeface);
+        }
+
+        public void setData(ForecastByHour fbh) {
+            Context context = getTxtDayName().getContext();
+            Forecast midday = fbh.getMiddayForecast();
+            getTxtDayName().setText(TextHelpers.GetShortDayString(fbh.getMiddayForecast()));
+            String icName = TextHelpers.GetIconName(midday);
+            getTxtIcon().setText(icName);
+            if (TextHelpers.IsIconYellow(icName))
+                getTxtIcon().setTextColor(ContextCompat.getColor(context, R.color.colorYellow));
+            else getTxtIcon().setTextColor(ContextCompat.getColor(context, R.color.colorIcon));
+            getTxtDescription().setText(midday.getWeatherDescription());
+            getTxtMinTemp().setText(TextHelpers.GetTemperatureString(fbh.getMinTemp()));
+            getTxtMaxTemp().setText(TextHelpers.GetTemperatureString(fbh.getMaxTemp()));
+        }
+
+        public TextView getTxtDayName() {
+            return txtDayName;
+        }
+
+        public TextView getTxtDescription() {
+            return txtDescription;
+        }
+
+
+        public TextView getTxtIcon() {
+            return txtIcon;
+        }
+
+
+        public TextView getTxtMinTemp() {
+            return txtMinTemp;
+        }
+
+
+        public TextView getTxtMaxTemp() {
+            return txtMaxTemp;
+        }
+
+    }
 }

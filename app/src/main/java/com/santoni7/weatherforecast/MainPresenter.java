@@ -19,6 +19,8 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
 
     @Override
     public void onCreated() {
+        getView().tryRestoreWeather(); // Restore from offline storage, if have
+
         PreferenceManager preferenceManager = PreferenceManager.getInstance();
 
         String location = preferenceManager.getLocationName();
@@ -48,13 +50,15 @@ public class MainPresenter extends PresenterBase<MainContract.View> implements M
     }
 
     @Override
-    public void onWeatherResult(String res) {
+    public void onWeatherResult(String res, boolean fromOfflineStorage) {
         Log.i(TAG, "onWeatherResult: " + res);
         JsonParser jp = new JsonParser(res);
-        lastUpdate = Calendar.getInstance();
-
-        PreferenceManager.getInstance().setLastUpdated(lastUpdate.getTimeInMillis());
+        if(!fromOfflineStorage) {
+            lastUpdate = Calendar.getInstance();
+            PreferenceManager.getInstance().setLastUpdated(lastUpdate.getTimeInMillis());
+        }
         getView().updateView(jp);
+        getView().saveWeatherLocally(res);
     }
 
     @Override

@@ -14,6 +14,8 @@ public class MainContract {
         void requestGeoUpdate();
         void requestWeatherUpdate(GeoData geo);
         void updateView(JsonParser jsonParser);
+        void saveWeatherLocally(String weatherJson);
+        void tryRestoreWeather();
     }
 
     interface Presenter extends MvpPresenter<View>{
@@ -24,7 +26,7 @@ public class MainContract {
         void onGpsNotAvailable();
         void onGeoResult(GeoData geoData);
         void onBtnClick(int id);
-        void onWeatherResult(String res);
+        void onWeatherResult(String res, boolean fromOfflineStorage);
 
     }
 }
